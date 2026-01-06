@@ -1,0 +1,45 @@
+services:
+  - type: web
+    name: ansapra-web
+    env: python
+    region: oregon
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port 10000 --workers 2 --timeout-keep-alive 30
+    healthCheckPath: /health
+    envVars:
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: ansapra-redis
+          property: connectionString
+      - key: DEEPSEEK_API_KEY
+        sync: false
+      - key: SPRINGER_API_KEY
+        sync: false
+      - key: SECRET_KEY
+        generateValue: true
+
+  - type: worker
+    name: ansapra-worker
+    env: python
+    region: oregon
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: celery -A app.tasks.celery_app worker --loglevel=info
+    envVars:
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: ansapra-redis
+          property: connectionString
+      - key: DEEPSEEK_API_KEY
+        sync: false
+      - key: SPRINGER_API_KEY
+        sync: false
+
+  - type: redis
+    name: ansapra-redis
+    region: oregon
+    plan: free
+    ipAllowList: []
